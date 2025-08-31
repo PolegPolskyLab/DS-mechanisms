@@ -1,0 +1,20 @@
+begintemplate s_comp
+public InputDends,soma, all , APcounter
+objref InputDends, all, NC, APcounter, nil
+create soma
+proc init(){
+	access soma
+	pt3dclear()
+	pt3dadd(-100, 0, 0, 2)
+	pt3dadd(100, 0, 0, 2)
+	nseg=1
+	InputDends = new SectionList()
+	InputDends.append()
+	all = new SectionList()
+	all.append()
+	NC=new NetCon(&soma.v(0.5),nil)
+	NC.threshold= -20
+	APcounter=new Vector()
+	NC.record(APcounter)
+}
+endtemplate s_comp

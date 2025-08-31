@@ -1,0 +1,66 @@
+: Graded Synapse with first order binding kinetics
+
+NEURON {
+POINT_PROCESS SynVec_adapt
+	RANGE g,gain,g_syn, calc_temporal
+	RANGE e
+	RANGE activation, inactivation
+	RANGE postX,postY,preX,preY,cellNum
+	RANGE tau, tauRRP
+	NONSPECIFIC_CURRENT i
+}
+
+PARAMETER {
+	g=		0				:set by presynaptic release
+	e=		0				:reversal potential
+	postX=	0				:location x
+	postY=	0				:location y
+	preX=	0
+	preY=	0				:location of presynaptic cell
+	cellNum=-1				:the presynaptic BC
+	gain=	1				:gain factor
+	tau=	10
+	tauRRP=	100
+	calc_temporal= 1		:compute temporal synaptic activaiton/inactivation
+}
+
+ASSIGNED {
+	v (millivolt)
+	i (nanoamp)
+	g_syn
+	activation
+	inactivation
+}
+ 
+ 
+INITIAL {
+    activation=	0 
+    inactivation=	0 
+}    
+
+BREAKPOINT {
+	if(g < 0){
+		g= 0
+	}
+	g_syn= g * gain
+	if(calc_temporal){
+		activation= (g_syn - activation) * (1 - inactivation)
+		inactivation= (inactivation - activation)
+		if(inactivation < 0){
+			inactivation= 0
+		}
+		SOLVE state METHOD cnexp
+		i = (1e-3) * activation * (v - e)
+
+	}else{
+		i = (1e-3) * g_syn * (v - e)
+
+	}
+}
+ 
+ DERIVATIVE state {
+	activation'= -activation/ tau
+	inactivation'= -inactivation / tauRRP
+}
+
+ 

@@ -1,9 +1,9 @@
 numdendskip=1
 begintemplate Ganglion
 	external numdendskip
-	public soma,dend,dends ,somas ,all,ON,OFF ,SACinhibsyn,numsyn,BIPsyn,SACexcsyn,countON,axon, InputDends
+	public soma,dend,dends ,somas ,all,ON,OFF ,SACinhibsyn,numsyn,BIPsyn,SACexcsyn,countON,axon, InputDends,  APcounter
     objref dends,all ,ON,OFF,somas , InputDends
-	objref  SACinhibsyn,BIPsyn,SACexcsyn
+	objref  SACinhibsyn,BIPsyn,SACexcsyn, NC, APcounter, nil
 	 
 	soma3z=0
 	on3z=-10
@@ -11337,6 +11337,10 @@ proc init(){local i
 		}
 
 		access soma
+		NC=new NetCon(&soma.v(0.5),nil)
+		NC.threshold= -20
+		APcounter=new Vector()
+		NC.record(APcounter)
 		shiftx=x3d(n3d(1)-1)
 		shifty=y3d(n3d(1)-1)
 		
