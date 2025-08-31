@@ -1,43 +1,92 @@
-# DS-mechanisms
-Receptive Field Properties that can mediate Direction Selectivity
+**README: Genetic Algorithm Retinal Simulation**
 
-Python-NEURON code, run 'main.py'
-Requirements:
+This repository contains code to run genetic algorithm (GA)–driven optimization of receptive field (RF) parameters in a multicompartmental NEURON model. 
 
-bison==0.1.3
-certifi==2024.8.30
-charset-normalizer==3.4.0
-click==8.1.7
-cmake==3.31.0.1
-contourpy==1.3.0
-cramjam==2.7.0
-cycler==0.12.1
-Cython==3.0.11
-fastparquet==2023.10.1
-find_libpython==0.4.0
-flex==6.14.1
-fonttools==4.54.1
-fsspec==2023.12.2
-h5py==3.10.0
-idna==3.10
-imagecodecs==2024.1.1
-jsonpointer==3.0.0
-kiwisolver==1.4.7
-matplotlib==3.9.2
-NEURON==8.2.0
-numpy==1.26.4
-oiffile==2024.5.24
-packaging==23.2
-pandas==2.1.4
-pillow==11.0.0
-pyparsing==3.2.0
-python-dateutil==2.8.2
-pytz==2023.3.post1
-requests==2.32.3
-rfc3987==1.3.8
-six==1.17.0
-strict-rfc3339==0.7
-tifffile==2023.12.9
-tzdata==2023.4
-urllib3==2.2.3
-validate-email==1.3
+The framework allows exploring excitatory and inhibitory presynaptic populations, different stimulus conditions (moving bars, drifting gratings), and synaptic mechanisms such as short-term depression and facilitation.
+
+**Requirements:**
+
+Python 3.8+
+
+NEURON simulator
+ with Python bindings (pip install neuron)
+
+numpy
+matplotlib (not strictly required)
+argparse
+multiprocessing
+pickle
+h5py
+os
+copy
+scipy.ndimage
+time
+math
+
+**Running the simulation:**
+
+Make sure to compile the MOD files (located in the 'MOD' subfolder
+
+Create 'results' or 'output' directories in the current folder if those do not exist
+
+run:
+python main.py
+
+This runs the GA with default parameters as defined in global_params.
+
+
+**Command-line arguments:**
+You can override defaults using flags:
+
+--cellType
+Selects the cell type. Options include:
+
+"RGC" (default)
+"single compartment"
+
+--job_id
+Assigns a numeric job ID to the simulation (useful for cluster runs).
+
+Example:
+
+python main.py --cellType RGC --job_id 42
+
+
+Key Concepts:
+
+At the top of the file you can set:
+
+experiment_type = ['RGC']  
+or ['RGC', 'pre_inhibition']  
+or ['single compartment']
+or ['single compartment','pre_inhibition']
+
+
+RGC: full retinal ganglion cell model
+single compartment: simplified soma-only model
+pre_inhibition: include inhibitory presynaptic populations
+
+
+**Global parameters:**
+
+All tunable parameters are in global_params. Some important ones:
+numPop: population size (default 10)
+numGen: number of generations (default 100)
+mutationRate: mutation rate (default 0.1)
+
+**Circuit/Cell parameters:**
+num_input_types: number of presynaptic clusters (default is 4)
+RF_constrains: defines which RF parameters can vary (amplitude, kinetics, size, orientation, etc.)
+depression, facilitation: whether short-term plasticity is active
+
+**Simulation control:**
+switch_to_spiking_model: generation at which model produces spikes (set to a high value to avoid spikes)
+stim_params: visual stimulus parameters (bar or drifting grating)
+debugger: flags for running NEURON, multithreading, etc.
+
+Workflow:
+Define experiment type (experiment_type list).
+Adjust global parameters as needed in global_params.
+Run simulation using python main.py.
+The genetic algorithm (GA_loop) evolves RF parameters to optimize model performance.
+Results are saved to H5 file in the 'results' folder.
