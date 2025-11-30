@@ -12,7 +12,8 @@ h.load_file('stdrun.hoc')
 # Other flags are   'pre_inhibition', 'drifting grating-steady state'
 
 #experiment_type= ['RGC', 'pre_inhibition']
-experiment_type= ['RGC']
+#experiment_type= ['single compartment', 'drifting grating-steady state']
+experiment_type= ['single compartment']
 #--------------------------------------#
 
 # Receptive fields of Excitatory and Inhibitory presynaptic populations
@@ -28,7 +29,7 @@ experiment_type[0]= parser.parse_args().cellType
 global_params = {
     'randomStart':      True,   # random params or load from file
     'numPop':           10,      # population size [10]
-    'numGen':           100,      # number of generations
+    'numGen':           300,      # number of generations
 
     'cellType':         experiment_type[0],   
     'numSpeed':         1,           # number of probed speeds [5]
@@ -36,40 +37,46 @@ global_params = {
     'numRep':           1,      # number of repeats (for example when the stimulus is noisy)
     'numDir':           2,      # number of probed directions, keep 2 or more
 
-    'num_input_types':       4 if ('RGC' in experiment_type) else 2,      # number of different presynaptic clusters with different response profiles 
+    'num_input_types':      4 if ('RGC' in experiment_type) else 2,      # number of different presynaptic clusters with different response profiles 
     
     'switch_to_spiking_model':          1000,   # Set to a number < numGen to produce somatic spikes
+    'switch_to_exc_drive_for_dsi':      1000,     # optimize the dsi of the excitatory drive
     
     'num_syn_replace_input_cell_dist':     100,               # Presynaptic inputs are determined by number of synapses, to cancel - set to zero
     # If    num_syn_replace_input_cell_dist==0, provide the following information:
     'dist_between_input_cells':            28,           # Distance between BCs
     'dist_between_input_cells_SD':         10,            # Some variability so not all BCs are on the same grid
 
-    'mutationRate':      0.1,     # Change in param values between generations
+    'mutationRate':      0.05,     # Change in param values between generations
     'analysis_time':     0.7 if ('drifting grating-steady state' in experiment_type) else 0,    # When to start DSI analysis (to avoid initial bumps). Should be zero for moving bars. 
+
     # RF structue
     "RF_constrains": {
         cell_type: {
             **{
                 cs: {
                     'varyAmplitude': False,          # Presynaptic inputs that vary in their strength  
-                    'varyKinetics': False,          # Presynaptic inputs that vary in their kinetics
+                    'varyKinetics': False,          # Presynaptic inputs that vary in their kinetics20*200
                     'varySize': False,               # Presynaptic inputs that vary in their RF size  
                     'varyOrientation': False,# Presynaptic inputs that vary in their RF orientation
                 }
                 for cs in pre_RF_components
             },
-            'doSurround': False,    # mutate surround (does nothing for center components)
-            'depression': False,
-            'facilitation': False,
+            'doSurround': False,                # mutate surround (does nothing for center components)
+            'depression': False,                # simulate synaptic depression
+            'facilitation': False,              # simulate synaptic facilitation
             'depression_tau': False,
             'facilitation_tau': False,
+            'inactivation': True,              # simulate readily releasable pool depletion
+            'same cs tau':  False,               # keep the kinetics of the center surround the same
         }
         for cell_type in pre_cell_types
     },
 
+    'normalize_to_max':     True,              # normalizes by the peak response 
+    'relu':                 True,              # rectification
     'pre_inhibition':       'pre_inhibition' in experiment_type,          # include inhibitory presynaptic inputs
-    
+    #'conductance_dsi':      True,       # compute DSI from the presynaptic conductance
     # SIMULATION
     'debugger':  {
         'run_neuron': 	    True,	    # Actually run the simulation
@@ -82,7 +89,7 @@ global_params = {
     'run_debugger':     False,           # RUN DEBUGGER
     
     'job_id':           0,
-    'save_every_gen':   10,             # Save RF parameters
+    'save_every_gen':   100,             # Save RF parameters
     'gen':              0,              # Generation number (set by the GA)
     'fullRFcomputation':False,		    # compute RF activation from exact location info vs using an offset
     'save_all':         False,          # Save all parameters (takes a lot of space)
@@ -91,21 +98,28 @@ global_params = {
     'stim_params': {
         'type':             'dg' if ('drifting grating-steady state' in experiment_type) else 'bar', # [bar, dg] # Moving bar, drifting grating,
         'extra':            '',     # Currently of 'vary bar duration' is implemented
-        'dt':               2, # if ('drifting grating-steady state' in experiment_type) else 10,       # Time step
+        'dt':               1 if ('drifting grating-steady state' in experiment_type) else 10,       # Time step
         'dx':               10,                     # Spatial step
         'arena':            1000,                   # Visual presentation arena size in microns
         'tStop':            [],                     # Simulation duration
         'speed':            [],      
         'contrast':         [], 
         'angle':            [], 
-        'delay':            [200], 
+        'delay':            [200], #[500] if ('drifting grating-steady state' in experiment_type) else [200],
         'duration':         [500] if ('drifting grating-steady state' in experiment_type) else [200],
         'cycle':            [],
     }
 }
-
-# Hassenstein-Reichardt model
-global_params["RF_constrains"]["excitation"]["center"]["varyKinetics"]= True
+#global_params["RF_constrains"]["inhibition"]["center"]["varyAmplitude"]= True
+#global_params["RF_constrains"]["excitation"]["center"]["varyAmplitude"]= True
+global_params["RF_constrains"]["excitation"]["center"]["varySize"]= True
+#global_params["RF_constrains"]["excitation"]["surround"]["varyKinetics"]= True
+#global_params["RF_constrains"]["excitation"]["center"]["varyOrientation"]= True
+#global_params["RF_constrains"]["excitation"]["surround"]["varySize"]= True
+#global_params["RF_constrains"]["excitation"]["surround"]["varyAmplitude"]= True
+#global_params["RF_constrains"]["excitation"]["surround"]["varyKinetics"]= True
+#global_params["RF_constrains"]["excitation"]["surround"]["varyOrientation"]= True
+#global_params["RF_constrains"]["excitation"]["doSurround"] = True
 
 
 if not global_params['run_debugger']:

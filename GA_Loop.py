@@ -32,7 +32,7 @@ def NEURON_mutation(global_params, input_params, output_params):
                 
                 # Impose boundaries on the RF parameters
                 if(key in ['widthX', 'widthY']):
-                    input_params['RF_params'][cell_type][cs][key]= np.clip(input_params['RF_params'][cell_type][cs][key], 10, 200 + 2000 * (cs == 'surround'))
+                    input_params['RF_params'][cell_type][cs][key]= np.clip(input_params['RF_params'][cell_type][cs][key], 10, 200 + 300 * (cs == 'surround'))
 
                 if(key in ['tau', 'tauRRP']):
                     input_params['RF_params'][cell_type][cs][key]= np.clip(input_params['RF_params'][cell_type][cs][key], global_params['stim_params']['dt'], 10000) 
@@ -56,7 +56,12 @@ def NEURON_mutation(global_params, input_params, output_params):
                 
             if not global_params['RF_constrains'][cell_type][cs]['varyAmplitude'] :                # similar RF strength
                 input_params['RF_params'][cell_type][cs]['peak'].fill(input_params['RF_params'][cell_type][cs]['peak'][0]) 
-                   
+
+            if global_params['RF_constrains'][cell_type]['same cs tau'] :                           # keep the taus the same between center and surround
+                if (cs == 'surround'):
+                    input_params['RF_params'][cell_type]['surround']['tau'] = input_params['RF_params'][cell_type]['center']['tau'] 
+                    input_params['RF_params'][cell_type]['surround']['tauRRP'] = input_params['RF_params'][cell_type]['center']['tauRRP'] 
+
         # Disable surround
         if not global_params['RF_constrains'][cell_type]['doSurround']:        # No surround
             input_params['RF_params'][cell_type]['surround']['peak']*= 0 
@@ -140,13 +145,16 @@ def GA_Run(model, global_params):
                 speed= global_params['debugger']['set_speed']
             
             # Compute cycle (when activated with drifting grating)
-            if global_params['stim_params']['type'] == 'dg':
-                speed=  1
-                if(global_params['numSpeed'] == 5):
-                    #cycles= [ 100, 200, 400, 800, 1600]
-                    cycle= 100 * ( 2**s ) 
-                if(global_params['numSpeed'] == 2):
-                    cycle= 100 + 400 * s
+            # if global_params['stim_params']['type'] == 'dg':
+            #     speed=  1
+            #     if(global_params['numSpeed'] == 5):
+            #         speed=  2**(s - 2)
+            #     if(global_params['numSpeed'] == 2):
+            #         speed=  0.25 + 0.75 * s                    
+                # if(global_params['numSpeed'] == 5):
+                #     cycle= 100 * ( 2**s ) 
+                # if(global_params['numSpeed'] == 2):
+                #     cycle= 100 + 400 * s
 
             # vary bar duration
             if global_params['stim_params']['extra'] == 'vary bar duration':
@@ -168,6 +176,7 @@ def GA_Run(model, global_params):
                 dsi_list= []
                 adjusted_dsi_list= []            
                 model.output_params['cell']['max_soma_single_run']= []
+                model.output_params['cell']['max_conductance_single_run']= []
                 
                 # Directions
                 for dr in range (global_params['numDir']):
@@ -241,8 +250,11 @@ def GA_Run(model, global_params):
                     h.run()
                     GA_RecordingVectors(global_params, model, populate= True)
 
-                # Compute DSI  after all dirs are done                
-                sum_run= sum( model.output_params['cell']['max_soma_single_run'] )
+                # Compute DSI  after all dirs are done      
+                sum_run = sum( model.output_params['cell']['max_soma_single_run'] )
+                if( model.input_params['gen'] >= global_params['switch_to_exc_drive_for_dsi'] ) and ( model.input_params['gen'] < global_params['numGen'] - 2 ):          
+                    sum_run = sum( model.output_params['cell']['max_conductance_single_run'] )
+                
                 if sum_run == 0:
                     dsi_list.append(0)
                     adjusted_dsi_list.append(0)
@@ -251,15 +263,22 @@ def GA_Run(model, global_params):
                 else:
                     dsi_top= 0
                     for sim in range(len(score_right)):
-                        dsi_top+= score_right[sim] * model.output_params['cell']['max_soma_single_run'][sim] #// sum_run
+                        if( model.input_params['gen'] >= global_params['switch_to_exc_drive_for_dsi'] ) and ( model.input_params['gen'] < global_params['numGen'] - 2 ):
+                            dsi_top += score_right[sim] * model.output_params['cell']['max_conductance_single_run'][sim] #// sum_run
+                        else:
+                            dsi_top += score_right[sim] * model.output_params['cell']['max_soma_single_run'][sim] #// sum_run
                     dsi_list.append( dsi_top / sum_run)
                     # GA is trained based on adjusted DSI that takes into account response amplitude
-                    adjusted_dsi_list.append((dsi_top / sum_run) * (math.tanh(0.2 * max( model.output_params['cell']['max_soma_single_run']) )))
+                    somav = max(model.output_params['cell']['max_soma_single_run'])
+                    adj_dsi = (dsi_top / sum_run) * (math.tanh(0.2 * somav  ))    # penalty on small depolarization
+                    if somav > 30:          # penalty on large depolarization that reaches reversal - solution for some conditions
+                        adj_dsi *= np.exp(-(somav-30)/5)
+                    adjusted_dsi_list.append(adj_dsi)
 
-                    model.output_params['cell']['dsi_list'].append(dsi_list)
-                    model.output_params['cell']['adjusted_dsi_list'].append(adjusted_dsi_list)
-                    if global_params['debugger']['print_dsi']:  # Report DSI values from all cells
-                        print(np.array(model.output_params['cell']['max_soma_single_run']), dsi_list, 'adjusted', adjusted_dsi_list)
+                model.output_params['cell']['dsi_list'].append(dsi_list)
+                model.output_params['cell']['adjusted_dsi_list'].append(adjusted_dsi_list)
+                if global_params['debugger']['print_dsi']:  # Report DSI values from all cells
+                    print(np.array(model.output_params['cell']['max_soma_single_run']), dsi_list, 'adjusted', adjusted_dsi_list)
     
     # Find the final DSI from all speeds/contrasts/etc
     model.output_params['cell']['dsi']= np.mean(model.output_params['cell']['dsi_list'])
@@ -369,7 +388,7 @@ def GA_Execute_loop(models,  global_params):
             if global_params['debugger']['print_dsi']:
                 print(f"Model={pop}, DSI={model.output_params['cell']['dsi']}. Best pos={best_pos} ({best_dsi})")            
        
-        print(f"Done generation {global_params['gen']} out of {global_params['numGen']}, best score= {best_dsi} [{best_adjusted_dsi}], time - {(time.time()-gen_time):.4f}")
+        print(f"Done generation {global_params['gen']} out of {global_params['numGen']}, best score= {best_dsi}, adjusted DSI= {best_adjusted_dsi}, time - {(time.time()-gen_time):.4f}")
         score.append(best_dsi) # Save progress
 
 

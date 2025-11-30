@@ -76,7 +76,7 @@ def GA_Input_SetSynapses(global_params, model):
         input_population.append(model.input_inh_list)
 
 
-    if (global_params['num_syn_replace_input_cell_dist'] > 0): # place inputs based on synapses
+    if (global_params['num_syn_replace_input_cell_dist'] > 0) and (global_params['cellType'] != 'single compartment'): # place inputs based on synapses
         total_dist=0
         for sec in model.cell.InputDends: # Dendrites that get the inputs
             total_dist+= sec.L
@@ -112,7 +112,7 @@ def GA_Input_SetSynapses(global_params, model):
         for sec in model.cell.InputDends: # Dendrites that get the inputs
             sec.push()                
             numSyn= max(1, int(sec.L/global_params['dist_between_input_cells']) ) # Calc # inputs if separate input by global_params['distSyn'] micron
-            if(model.name == 'single compartment'):
+            if(global_params['cellType'] == 'single compartment'):
                 numSyn=global_params['num_input_types']
             
             for pos in range(numSyn):                       # Over all Synapses
@@ -128,8 +128,9 @@ def GA_Input_SetSynapses(global_params, model):
                 # Postsynaptic/Presynaptic positions
                 post_x= (h.x3d(dend_i) + h.x3d(dend_i + 1))/2
                 post_y= (h.y3d(dend_i) + h.y3d(dend_i + 1))/2
-                if(model.name == 'single compartment'):
-                    post_x= -100 + 200 / max(1, global_params['num_input_types'] - 1) * pos
+                if(global_params['cellType'] == 'single compartment'):
+                    # post_x= -100 + 200 / max(1, global_params['num_input_types'] - 1) * pos
+                    post_x= -50 + 100 / max(1, global_params['num_input_types'] - 1) * pos
                     post_y= 0
                 # Find the nearest presynaptic cell
                 pre_x= np.random.normal((post_x / global_params['dist_between_input_cells']) * global_params['dist_between_input_cells'] , global_params['dist_between_input_cells_SD'] )
@@ -137,9 +138,9 @@ def GA_Input_SetSynapses(global_params, model):
 
                 # Type of presynaptic cluster
                 cluster= -1#math.floor(global_params['num_input_types'] * h.distance(model.cell[cell].soma(0.5), sec(dend_pos)) / model.max_input_extent[cell])
-                if(model.name == 'RGC'):
+                if(global_params['cellType'] == 'RGC'):
                     cluster= max(0,min(global_params['num_input_types'] - 1, math.floor(global_params['num_input_types'] * (post_x - model.min_input_extent) / (model.max_input_extent - model.min_input_extent))))
-                if(model.name == 'single compartment'):
+                if(global_params['cellType'] == 'single compartment'):
                     cluster= pos
                                 
                 # Find input cells with same location and cluster type

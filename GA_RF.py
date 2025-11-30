@@ -23,8 +23,9 @@ def show3d(image):
 def GA_StimTrajectory(global_params, input_params, repeat= 0):
     start_time = time.time()
     # Compute sim duration
-    tstop= max(1000, 00 + global_params['stim_params']['arena'] / global_params['stim_params']['speed'][-1] + global_params['stim_params']['delay'][-1] + global_params['stim_params']['duration'][-1])
-
+    tstop= max(1000, 300 + global_params['stim_params']['arena'] / global_params['stim_params']['speed'][-1] + global_params['stim_params']['delay'][-1] + global_params['stim_params']['duration'][-1])
+    if global_params['stim_params']['type'] == 'dg':
+        tstop = 1500
     global_params['stim_params']['tStop'].append(tstop)
 
     adj_tStop= int(global_params['stim_params']['tStop'][-1] / global_params['stim_params']['dt'])
@@ -106,14 +107,17 @@ def GA_Pre_activation(cell_type, input_params, global_params, cls, xcenter=0, yc
     inactivation_surround= []
     drive= []
     for cs in pre_RF_components:
-        # 2D RF structure   
+        # 2D RF structure  
         RF_space = gauss2d(xcenter, ycenter, RF_params[cell_type][cs]['widthX'][cls] / conv, RF_params[cell_type][cs]['widthY'][cls] / conv, RF_params[cell_type][cs]['widthC'][cls], arena, spatial_points)
 
         # Convolve the spatial RF with the stimulus to get the fraction of the RF exposed to the stimulus
         RF_space_time = input_params['trajectory'] * RF_space[:, :, None]   # Convolve RF x stimulus
-        spatial_sum= np.sum(RF_space_time, axis= (0,1))     # Extract spatial activation intensity at each frame
-        spatial_sum/= np.max(spatial_sum)                   # Normalize to peak
-        spatial_sum*= input_params["fromPhsynG"]            # gain from photoreceptors 
+        spatial_sum= np.sum(RF_space_time, axis= (0,1))         # Extract spatial activation intensity at each frame
+        if global_params['normalize_to_max']:
+            spatial_sum /= np.max(spatial_sum)                  # Normalize to peak
+        else:
+            spatial_sum /= np.sum(RF_space)                     # normalize by the shape of the RF
+        #spatial_sum*= input_params["fromPhsynG"]               # gain from photoreceptors 
         
         # Compute the temporal activation
         activation = np.zeros(time_steps)           # Not active
@@ -124,11 +128,12 @@ def GA_Pre_activation(cell_type, input_params, global_params, cls, xcenter=0, yc
 
         for tt in range(1, time_steps):   # Dynamics of the activation and inactivation
             activation[tt] = (( spatial_sum[tt - 1]- activation[tt - 1]) * (1 - adjtau) + activation[tt - 1]) * (1 - inactivation[tt - 1] )
-            inactivation[tt]+= inactivation[tt - 1] + activation[tt] 
-            inactivation[tt]= np.clip(inactivation[tt] * (adjtauRRP), 0, 1)
+            if global_params['RF_constrains'][cell_type]['inactivation']: # model RRP
+                inactivation[tt]+= inactivation[tt - 1] + activation[tt] 
+                inactivation[tt]= np.clip(inactivation[tt] * (adjtauRRP), 0, 1)
     
-        
-        activation*= RF_params[cell_type][cs]['peak'][cls]
+        if cs == 'surround': 
+            activation*= RF_params[cell_type][cs]['peak'][cls]
         #show2d(RF_space)
 
         if(cs == 'center'):                         # Compute center response first
@@ -137,12 +142,17 @@ def GA_Pre_activation(cell_type, input_params, global_params, cls, xcenter=0, yc
             activation_center= activation
             inactivation_center= inactivation
         else:               # Remove the surround from the center
-            drive = np.clip(drive - activation, 0, None ) # type: ignore
+            if global_params['relu']:
+                drive = np.clip(drive - activation, 0, None ) # type: ignore
+            else:
+                drive = drive - activation
             spatial_sum_surround= spatial_sum
             activation_surround= activation 
             inactivation_surround= inactivation
 
-    # Synaptic plasticity
+    # combined amplitude 
+    drive*= RF_params[cell_type]['center']['peak'][cls]
+   # Synaptic plasticity
     facilitation= np.zeros(time_steps)
     depression= np.ones(time_steps)		# Start with full RRP, no depression
     STP= drive.copy()

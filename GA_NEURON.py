@@ -76,11 +76,14 @@ def GA_RecordingVectors(global_params, model, prep= False, populate= False):
 
             
         model.output_params['cell']['somaV_all_angles'].append(model.output_params['cell']['somaV'].to_python())
+        analysis_time= int(model.output_params['cell']['somaV'].size() * global_params['analysis_time'])
+
+        sum_vec = np.sum(exc_drive, axis=0)
+        model.output_params['cell']['max_conductance_single_run'].append(np.max(sum_vec[analysis_time : ]) - np.min(sum_vec[analysis_time : ]))
             
         if(model.input_params['gen'] >= global_params['switch_to_spiking_model']):
             model.output_params['cell']['max_soma_single_run'].append(model.cell.APcounter.size())
         else:
-            analysis_time= int(model.output_params['cell']['somaV'].size() * global_params['analysis_time'])
             # dV response, penalty for depolarized potentials
             max_response= np.max(model.output_params['cell']['somaV'].to_python()[analysis_time : ] )-np.min(model.output_params['cell']['somaV'].to_python()[analysis_time : ])
             max_response*= 1-math.tanh((60 + np.min(model.output_params['cell']['somaV'].to_python()[analysis_time : ]))/60) #np.clip(1 - ((60 + np.min(model.output_params['cell'][cell]['somaV'].to_python()[analysis_time : ]))/60), 0, 1)

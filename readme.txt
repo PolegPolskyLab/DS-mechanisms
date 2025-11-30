@@ -15,6 +15,8 @@ matplotlib
 argparse (included in Python stdlib)
 Multiprocessing support (multiprocessing, included in stdlib)
 
+for more information see the 'requirements.txt' file
+
 Running the simulation:
 
 Make sure to compile the MOD files (located in the 'MOD' subfolder
@@ -80,3 +82,40 @@ Adjust global parameters as needed in global_params.
 Run simulation using python main.py.
 The genetic algorithm (GA_loop) evolves RF parameters to optimize model performance.
 Results are saved to H5 file in the 'results' folder.
+
+
+EDIT 1:
+Workflow to run the model in google colab
+
+#install neuron for python
+!pip install neuron -q		
+# clone the github 
+!git clone --branch Dec2025 --recurse-submodules  https://github.com/PolegPolskyLab/DS-mechanisms.git
+#install requirements 
+%pip install -U pip
+%pip install -r requirements.txt
+
+
+# compile the neuron mod files
+%cd DS-mechanisms/mod
+!nrnivmodl
+
+# copy the x84_64 folder to the main directory
+!mv -v x86_64 ..
+%cd ..
+
+# this should now work!
+!python main.py
+
+EDIT 2:
+This distribution contains two additional stand-alone files 'minimal_example.py' and 'RF_functions.py' which simulate directional processing of drifting gratings stimulation. The simulation is adapted from Borst, A. (2018). A biophysical mechanism for preferred direction enhancement in fly motion vision. PLoS Comput Biol, 14(6), e1006240. https://doi.org/10.1371/journal.pcbi.1006240.
+These files requre numpy and matplotlib. Explore the impact on direction selectivity with different receptive field configurations by changing line 30 in 'minimal_example.py'.
+Options are:
+experiment = 'amplitude'
+experiment = 'center_kinetics'
+experiment = 'center_width'
+experiment = 'surround_amp'
+experiment = 'surround_kinetics'
+experiment = 'surround_width'
+
+use python to execute 'minimal_example.py' to start the simulation.

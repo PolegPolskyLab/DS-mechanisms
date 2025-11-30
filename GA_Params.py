@@ -55,6 +55,14 @@ def GA_CreateParams(global_params, cellPos, model):
         with open(f"params/input_params_0.pkl", "rb") as f:
             model.input_params = pickle.load(f)
 
+    # model.input_params["RF_params"]["excitation"]["center"]["peak"] = np.ones((2,1))*.92
+    # model.input_params["RF_params"]["excitation"]["center"]["tau"] = np.ones((2,1))*30
+    # model.input_params["RF_params"]["excitation"]["center"]["widthX"] = np.ones((2,1))*113
+    # model.input_params["RF_params"]["excitation"]["surround"]["peak"] = np.ones((2,1))*.56
+    # model.input_params["RF_params"]["excitation"]["surround"]["tau"] = np.ones((2,1))*6
+    # model.input_params["RF_params"]["excitation"]["surround"]["widthX"][0] = 20
+    # model.input_params["RF_params"]["excitation"]["surround"]["widthX"][1] = 205
+   
     # Output of the detector
     model.output_params = {                     # Return info - voltage and calcium
         "cell" : {

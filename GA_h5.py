@@ -49,10 +49,16 @@ def pad_array(global_params, cell, arrays):
     return padded
     
 def GA_SaveH5(global_params, models, final):
+    constrains = f"g{global_params['switch_to_exc_drive_for_dsi']}_i{global_params['RF_constrains']['excitation']['inactivation']}_s{global_params['RF_constrains']['excitation']['doSurround']}_keepTau_{global_params['RF_constrains']['excitation']['same cs tau']}_"
+    constrains += f'c_amp{global_params["RF_constrains"]["excitation"]["center"]["varyAmplitude"]}_c_kin{global_params["RF_constrains"]["excitation"]["center"]["varyKinetics"]}_c_size{global_params["RF_constrains"]["excitation"]["center"]["varySize"]}_c_or{global_params["RF_constrains"]["excitation"]["center"]["varyOrientation"]}'
+    constrains += f's_amp{global_params["RF_constrains"]["excitation"]["surround"]["varyAmplitude"]}_s_kin{global_params["RF_constrains"]["excitation"]["surround"]["varyKinetics"]}_s_size{global_params["RF_constrains"]["excitation"]["surround"]["varySize"]}_s_or{global_params["RF_constrains"]["excitation"]["surround"]["varyOrientation"]}'
+    
     if(global_params['cellType'] in ['SAC','SAC network']):
         file_name= f"_s{global_params['numSpeed']}_c{global_params['numContrast']}_d{global_params['numDir']}_DIST{global_params['distSAC']}_NET{global_params['numSAClayersX']}x{global_params['numSAClayersY']}_{global_params['activeChannels']}_{global_params['network']}_j{global_params['job_id']}.h5"
     else:
-        file_name= f"_s{global_params['numSpeed']}_c{global_params['numContrast']}_d{global_params['numDir']}_{global_params['cellType']}_j{global_params['job_id']}.h5"
+        file_name= f"_s{global_params['numSpeed']}_{constrains}_j{global_params['job_id']}.h5"
+    #if global_params['use_exc_drive_for_dsi']:
+
     if(final):
         file_start= "result"
         try:
